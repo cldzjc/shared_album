@@ -63,14 +63,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     } catch (e) {
       if (mounted) {
         final message = e.toString().replaceAll('Exception: ', '');
-        showIosToast(
-          context,
-          message.contains('over_email_send_rate_limit') ||
-                  message.contains('email rate limit exceeded')
-              ? '验证邮件发送太频繁，请稍后再试，或先去邮箱查看最新确认邮件'
-              : '操作失败: $message',
-          isError: true,
-        );
+        final String friendly;
+        if (message.contains('over_email_send_rate_limit') ||
+            message.contains('email rate limit exceeded')) {
+          friendly = '验证邮件发送太频繁，请稍后再试，或先去邮箱查看最新确认邮件';
+        } else if (message.contains('ClientLoad') ||
+            message.contains('SocketException') ||
+            message.contains('ClientException') ||
+            message.contains('超时')) {
+          friendly = '网络连接失败，请检查网络后重试';
+        } else {
+          friendly = '操作失败: $message';
+        }
+        showIosToast(context, friendly, isError: true);
       }
     }
   }

@@ -287,13 +287,19 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       }
 
       // 用 updateUser 绑定邮箱密码，uid 保持不变（Supabase Anonymous Auth 官方升级路径）
-      await client.auth.updateUser(
-        UserAttributes(
-          email: email,
-          password: password,
-          data: {'nickname': nickname.trim()},
-        ),
-      );
+      // 手机网络不稳定时请求可能长时间挂起，加超时保证按钮状态能恢复。
+      await client.auth
+          .updateUser(
+            UserAttributes(
+              email: email,
+              password: password,
+              data: {'nickname': nickname.trim()},
+            ),
+          )
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () => throw Exception('网络连接超时，请检查网络后重试'),
+          );
 
       // 更新 profiles：account_type 改为 normal，nickname 写入
       await client
@@ -303,7 +309,11 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
             'account_type': 'normal',
             'updated_at': DateTime.now().toUtc().toIso8601String(),
           })
-          .eq('id', currentUser.id);
+          .eq('id', currentUser.id)
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () => throw Exception('网络连接超时，请检查网络后重试'),
+          );
 
       final profile =
           await _fetchProfile(currentUser.id) ??
@@ -340,10 +350,12 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     final nextState = await AsyncValue.guard(() async {
       final client = Supabase.instance.client;
 
-      final response = await client.auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
+      final response = await client.auth
+          .signInWithPassword(email: email, password: password)
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () => throw Exception('网络连接超时，请检查网络后重试'),
+          );
 
       final user = response.user;
       if (user == null) throw Exception('登录失败，用户为空');

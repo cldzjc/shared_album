@@ -569,57 +569,30 @@ class _HomePageState extends ConsumerState<HomePage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // ── Header：左上角菜单 + 问候语 ──
-                        Row(
+                        // ── Header：问候语 ──
+                        Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // 菜单按钮：点击展开右侧半屏功能面板
-                            Material(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(14),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(14),
-                                onTap: () => _openSideMenu(theme, authState),
-                                child: Container(
-                                  width: 46,
-                                  height: 46,
-                                  alignment: Alignment.center,
-                                  child: const Icon(
-                                    Icons.line_weight_rounded,
-                                    size: 24,
-                                    color: Color(0xFF1C1C1E),
-                                  ),
-                                ),
+                            Text(
+                              '${_greeting()}，',
+                              style: const TextStyle(
+                                fontSize: 34,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF1C1C1E),
+                                height: 1.2,
+                                letterSpacing: -0.5,
                               ),
                             ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '${_greeting()}，',
-                                    style: const TextStyle(
-                                      fontSize: 34,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFF1C1C1E),
-                                      height: 1.2,
-                                      letterSpacing: -0.5,
-                                    ),
-                                  ),
-                                  Text(
-                                    name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 34,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFF1C1C1E),
-                                      height: 1.2,
-                                      letterSpacing: -0.5,
-                                    ),
-                                  ),
-                                ],
+                            Text(
+                              name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 34,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF1C1C1E),
+                                height: 1.2,
+                                letterSpacing: -0.5,
                               ),
                             ),
                           ],
@@ -657,6 +630,30 @@ class _HomePageState extends ConsumerState<HomePage> {
                           _buildAlbumList(theme, myAlbumsState),
                         ],
                       ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── 固定左上角菜单按钮（点击展开右侧半屏功能面板） ──
+              Positioned(
+                top: 8,
+                left: 16,
+                child: Material(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () => _openSideMenu(theme, authState),
+                    child: Container(
+                      width: 46,
+                      height: 46,
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.line_weight_rounded,
+                        size: 24,
+                        color: Color(0xFF1C1C1E),
+                      ),
                     ),
                   ),
                 ),
