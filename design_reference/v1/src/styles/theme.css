@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+}
+
+:root {
+  /* Apple iOS HIG Inspired Palette - Quiet, Premium, Photo-first */
+  --background: #F2F2F7; /* iOS Grouped Background */
+  --foreground: #1C1C1E; /* iOS Label */
+  
+  --card: #FFFFFF;
+  --card-foreground: #1C1C1E;
+  
+  /* Primary interactions: Deep sophisticated dark gray/black to keep it neutral and premium */
+  --primary: #1C1C1E;
+  --primary-foreground: #FFFFFF;
+  
+  --secondary: #E5E5EA; /* iOS System Fill */
+  --secondary-foreground: #1C1C1E;
+  
+  --muted: #8E8E93; /* iOS Secondary Label */
+  --muted-foreground: #8E8E93;
+  
+  --accent: #F2F2F7;
+  --accent-foreground: #1C1C1E;
+  
+  --border: #C6C6C8; /* iOS Separator */
+  --ring: #1C1C1E;
+  
+  --radius: 12px;
+
+  --success: #34C759;
+  --error: #FF3B30;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  }
+}

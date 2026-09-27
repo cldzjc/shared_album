@@ -1,0 +1,68 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# 插件生成文件（由 flutter pub get 自动生成，不入库）
+.flutter-plugins
+
+# ── 环境变量与密钥（本地真实配置绝不入库）────────────────────────
+# 当前项目尚未使用 .env：客户端公开配置在 lib/config/app_config.dart，
+# 服务端密钥（service_role、OSS AccessKey 等）在云端环境变量中。
+# 以下为防御性忽略：若未来引入 .env 等本地密钥文件，真实值不会进入 Git。
+.env
+.env.*
+!.env.example
+
+# Cloudflare Wrangler 本地状态（临时工具缓存，不入库）
+.wrangler/
+
+# 开发过程生成的源码合集快照（lib/ 的完整复制品，非正式源码）
+# 保留在本地磁盘，但不进入 Git，避免源码重复与内容过期。
+lib_source_合集.txt
+
+# ── 明确入库说明（请勿把以下目录/文件重新加入忽略）────────────────
+# android/ ios/ web/ linux/ macos/ windows/ 是平台源码目录，必须入库，
+# 否则招聘方/协作者 clone 后无法构建项目。
+# pubspec.lock 是 Flutter 应用锁文件，必须入库以保证依赖版本可复现。
