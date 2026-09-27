@@ -1,137 +1,326 @@
 # Shared Album 共享相册
 
-一个基于 **Flutter + Supabase + 阿里云 OSS** 的临时共享相册应用。
+一个基于 Flutter + Supabase + 阿里云 OSS 开发的临时共享相册。
 
-创建者生成一个有效期 24 小时的相册，通过 **6 位数字分享码 + 访问密码** 分享给好友。好友**无需登录**即可浏览照片；正式账号用户可以上传、下载和管理照片。相册到期后由后端任务自动销毁云端资源。
+主要用于聚会、活动等多人一起拍照的场景。创建相册后生成一个 6 位数字分享码和访问密码，其他人无需注册账号即可加入并浏览照片。正式账号可以上传、下载和管理照片，相册到期后由后台任务自动清理云端资源。
 
-解决的核心问题：聚会、活动等场景下，让一群人快速集中共享照片，且分享者无需注册账号、相册到期后云端数据自动消失。
+这是一个个人独立开发项目，从产品设计、Flutter 客户端、数据库、对象存储到后端定时任务均由本人完成。
 
-## 核心功能
+## 项目功能
 
-- **邮箱注册 / 登录**（Supabase Auth）
-- **游客访问**：无需登录，凭分享码 + 密码即可加入并浏览相册
-- **创建相册**：自动生成 6 位数字分享码、访问密码（客户端 SHA-256 哈希后入库）、24 小时自动过期
-- **照片上传**：多图选择、上传进度、OSS 直传；免费版每册上限 200 张（前后端同步校验）
-- **照片浏览**：缩略图网格流、全屏预览（手势缩放）、缩略图 / 预览 / 原图三级 URL
-- **照片下载**：流式下载 + 进度回调 + 保存到系统相册（gal）
-- **照片删除**：权限校验 + 二次确认；先删 OSS 原图，成功后再删数据库记录
-- **过期自动清理**：Edge Function + Supabase Cron 后台批量清理过期相册（OSS 原图 + 数据库记录）
-- **客户端缓存**：缩略图与预览双层磁盘缓存（`flutter_cache_manager`，LRU 淘汰）
-- **Web 适配**：XHR 上传进度、Blob 下载
+* 邮箱注册 / 登录
+* 游客加入相册，无需注册即可浏览
+* 创建相册，自动生成 6 位数字分享码和访问密码
+* 多张照片选择与上传
+* OSS 直传及上传进度显示
+* 照片缩略图网格浏览
+* 全屏预览、手势缩放
+* 照片下载并保存到系统相册
+* 照片删除及权限校验
+* 相册 24 小时自动过期
+* Supabase Cron 定时清理过期相册
+* 缩略图、预览图和原图分级加载
+* 本地图片缓存
+* Web / PWA 浏览器适配
 
 ## 技术栈
 
-| 层次 | 技术 |
-| --- | --- |
-| 客户端 | Flutter (Dart, Material 3)、Riverpod 3.x（手动声明模式，无代码生成） |
-| 身份认证 | Supabase Auth（邮箱 + 密码） |
-| 数据层 | Supabase PostgreSQL + PostgREST + Row Level Security |
-| 服务端逻辑 | Supabase Edge Functions（Deno + TypeScript） |
-| 对象存储 | 阿里云 OSS（预签名直传 + 图片样式缩略图） |
-| 关键依赖 | `supabase_flutter`、`http`、`crypto`、`image_picker`、`cached_network_image`、`extended_image`、`gal`、`path_provider`、`connectivity_plus` |
+| 模块   | 技术                                          |
+| ---- | ------------------------------------------- |
+| 客户端  | Flutter / Dart                              |
+| 状态管理 | Riverpod 3.x                                |
+| 用户认证 | Supabase Auth                               |
+| 数据库  | PostgreSQL / PostgREST                      |
+| 数据权限 | Row Level Security（RLS）                     |
+| 后端逻辑 | Supabase Edge Functions / Deno / TypeScript |
+| 对象存储 | 阿里云 OSS                                     |
+| 图片缓存 | flutter_cache_manager                       |
+| 图片选择 | image_picker                                |
+| 图片预览 | extended_image                              |
+| 系统相册 | gal                                         |
 
-## 项目架构
+## 项目结构
 
-```
-Flutter 客户端（lib/）
- ├─ pages/        页面与交互（ConsumerWidget / ConsumerStatefulWidget）
- ├─ providers/    Riverpod 状态层（AsyncNotifier 手动声明）
- ├─ services/     服务层（Supabase 初始化、图片 URL、缓存、上传/下载/删除）
- ├─ widgets/      通用组件（倒计时、Toast 等）
- └─ config/       全局静态配置
-        │  PostgREST（anon key，受 RLS 约束）
-        ▼
-Supabase
- ├─ Auth              邮箱登录、身份校验
- ├─ PostgreSQL        相册 / 照片 / 用户资料 / 参与关系元数据
- ├─ RLS               行级权限策略（创建者 / 参与者 / 游客边界）
- └─ Edge Functions    oss-sign-upload / delete-resource / cleanup-expired-albums
-        │  （OSS AccessKey 仅存在于 Edge Function 环境变量）
-        ▼
-阿里云 OSS
- ├─ 原图存储（预签名 PUT 直传）
- └─ 样式缩略图（small-photos / preview）
-```
-
-职责边界：
-
-- 客户端**不持有** OSS AccessKey，上传地址由 Edge Function 动态签名；
-- `service_role` key 只存在于 Edge Function 环境变量中，数据库写操作均受 RLS 与函数内鉴权双重约束；
-- 图片 URL 变换集中在 `lib/services/photo_image_service.dart`，更换存储服务只需改这一个文件。
-
-## 关键技术实现
-
-### 1. OSS 预签名直传（不经过 Supabase 服务器）
-
-上传时客户端先调用 `oss-sign-upload` 获取预签名 PUT URL（60 秒有效），再用 `HTTP PUT` 将图片二进制直传 OSS，最后把 `publicUrl` 与 `objectKey` 写入 `photos` 表。上传流量不经过 Supabase 服务器，且客户端全程接触不到 OSS 密钥。
-
-### 2. RLS 权限模型
-
-`albums` / `photos` / `profiles` / `album_participants` 四张表均启用 RLS：相册参与者可浏览、创建者可管理、游客仅能通过"分享码 + 密码"校验流程访问脱敏数据。`password_hash` 等敏感字段不会被前端整行读取（建表与策略 SQL 见 `AGENTS.md`）。
-
-### 3. 三级图片资源与双层缓存
-
-每张照片有缩略图、预览、原图三种资源形态：浏览网格永远优先加载 OSS 样式缩略图（大幅降低流量成本）；全屏预览按需拉取；原图仅用于下载与保存。缓存层分"缩略图长期缓存"和"预览 LRU 缓存"，由 `flutter_cache_manager` 管理淘汰。
-
-### 4. 一致性删除
-
-`delete-resource` 与 `cleanup-expired-albums` 共享同一套删除方法：先删 OSS 原图，成功后才删数据库记录，避免"云上有图、库里无记录"或反向的不一致状态。
-
-### 5. 过期相册后台清理
-
-相册创建时写入 `expires_at = created_at + 24h`；客户端用独立倒计时组件做局部刷新；Supabase Cron 每 5 分钟触发一次 `cleanup-expired-albums`，单次批量处理 20 个过期相册并返回清理统计，不依赖客户端在线。
-
-### 6. 游客机制
-
-不依赖匿名登录。身份等级（guest / normal）由 `profiles.account_type` 判定，权限判断集中在 `lib/services/guest_session_manager.dart`：游客可浏览、加入；创建、上传、下载、删除均需正式账号，由 UI 层统一拦截引导登录。
-
-## 项目目录
-
-```
+```text
 lib/
-  config/    全局静态配置（Supabase 连接信息、业务常量）
-  services/  服务层：Supabase 客户端、图片 URL/缓存、上传/下载/删除、游客权限
-  providers/ Riverpod 状态层：认证、创建/加入相册、照片流、上传/下载状态
-  pages/     页面：主页、创建、加入、登录、相册详情、全屏预览
-  widgets/   通用组件：倒计时、iOS 风格 Toast
+├─ config/       全局配置和业务常量
+├─ pages/        页面
+├─ providers/    Riverpod 状态管理
+├─ services/     上传、下载、缓存、图片 URL 等业务服务
+└─ widgets/      通用组件
+
 supabase/
-  *.ts       Edge Functions：oss-sign-upload / delete-resource / cleanup-expired-albums
-  *.sql      数据库视图与校验函数脚本
-android/ ios/ web/ linux/ macos/ windows/  各平台工程目录
-test/        widget 测试
+├─ *.ts          Edge Functions
+└─ *.sql         数据库相关 SQL
+
+test/             Flutter 测试
+android/
+ios/
+web/
+linux/
+macos/
+windows/          Flutter 平台工程
 ```
+
+## 整体架构
+
+```text
+                 Flutter App / Web
+                        │
+              Supabase Auth / RLS
+                        │
+          ┌─────────────┴─────────────┐
+          │                           │
+      PostgreSQL                Edge Functions
+          │                           │
+          │                  ┌────────┴────────┐
+          │                  │                 │
+          │              OSS 签名上传      删除 / 清理
+          │                  │                 │
+          └──────────────────┴─────────────────┘
+                                    │
+                                阿里云 OSS
+```
+
+客户端主要负责页面交互和业务状态，照片文件本身不经过 Supabase 数据库，而是通过 Edge Function 获取 OSS 预签名地址后直接上传到 OSS。
+
+OSS 的 AccessKey 等敏感配置只放在 Edge Function 环境变量中，客户端只使用 Supabase 的公开客户端配置。
+
+## 几个比较关键的实现
+
+### 1. OSS 预签名直传
+
+上传照片时，客户端先请求 `oss-sign-upload` 获取临时的 OSS PUT 地址，然后直接把图片上传到 OSS。
+
+```text
+Flutter
+   │
+   ├── 请求上传签名
+   ▼
+oss-sign-upload
+   │
+   └── 返回临时 PUT URL
+              │
+              ▼
+         Flutter 直接上传
+              │
+              ▼
+           阿里云 OSS
+```
+
+这样图片文件不会先上传到 Supabase，再由 Supabase 转存到 OSS，可以减少中间层的文件传输。
+
+### 2. RLS 数据权限
+
+数据库使用 Supabase PostgreSQL，并通过 RLS 控制不同用户能够访问的数据。
+
+主要涉及：
+
+* `albums`
+* `photos`
+* `profiles`
+* `album_participants`
+
+创建者、参与者和游客在业务上的操作范围不同，客户端不能单纯依靠 UI 隐藏按钮来实现权限控制。
+
+### 3. 图片分级加载
+
+照片浏览时没有直接加载原图，而是根据使用场景使用不同尺寸的图片：
+
+```text
+缩略图
+  ↓
+相册网格浏览
+
+预览图
+  ↓
+全屏查看
+
+原图
+  ↓
+下载 / 保存
+```
+
+缩略图使用 OSS 图片处理样式生成，减少列表页面加载时的图片大小。
+
+这个方案主要解决了实际开发过程中遇到的一个问题：原图较大时，相册第一次打开会明显变慢，因此把“浏览”和“下载原图”拆成了不同的资源。
+
+### 4. 图片缓存
+
+客户端使用 `flutter_cache_manager` 对缩略图和预览图进行缓存。
+
+相册列表反复进入时，不需要每次重新下载已经加载过的图片，同时对缓存进行淘汰，避免长期占用本地空间。
+
+### 5. 照片删除
+
+照片删除不是简单删除数据库记录。
+
+正常删除流程为：
+
+```text
+用户请求删除
+      ↓
+检查权限
+      ↓
+删除 OSS 文件
+      ↓
+OSS 删除成功
+      ↓
+删除数据库记录
+```
+
+过期相册的后台清理也使用类似的删除流程。
+
+### 6. 自动清理过期相册
+
+相册创建时记录过期时间。
+
+Supabase Cron 每 5 分钟触发一次 `cleanup-expired-albums`，后台查找已经过期的相册并清理对应的 OSS 文件和数据库记录。
+
+因此即使用户已经关闭 App，相册仍然可以在后台完成清理。
+
+### 7. 游客访问
+
+项目没有使用匿名登录来实现游客模式。
+
+游客通过：
+
+```text
+6 位分享码 + 访问密码
+```
+
+进入相册，并根据 `profiles.account_type` 区分 `guest` 和 `normal` 用户。
+
+游客主要用于浏览和加入相册，创建、上传、下载、删除等操作需要正式账号。
+
+## Edge Functions
+
+项目目前主要使用以下 Edge Functions：
+
+```text
+oss-sign-upload
+    获取 OSS 上传签名
+
+delete-resource
+    删除 OSS / 数据库资源
+
+cleanup-expired-albums
+    定时清理过期相册
+```
+
+OSS 的 AccessKey、Supabase Service Role Key 等服务端配置通过环境变量提供，没有提交到代码仓库。
+
+## Web / PWA
+
+项目除了 Android 外，也针对 Web 做了适配，可以作为 PWA 使用。
+
+Web 环境与 Android 的文件处理方式不同，因此对上传和下载进行了单独处理：
+
+* Web 上传使用浏览器文件选择和 XHR
+* 上传过程中显示进度
+* Web 下载使用浏览器 Blob 下载
+* Android 使用系统文件和相册相关能力
+
+目前主要开发和验证环境仍然是 Android，Web 已完成基本适配；iOS 和桌面平台保留 Flutter 工程，但没有宣称经过完整的平台稳定性验证。
 
 ## 本地运行
 
+安装依赖：
+
 ```bash
 flutter pub get
+```
+
+运行：
+
+```bash
 flutter run
 ```
 
-完整跑通业务需要自备以下云端资源（**请勿把真实密钥提交到仓库**）：
+完整运行项目需要自行准备 Supabase 和阿里云 OSS 环境。
 
-1. **Supabase 项目**：把 `lib/config/app_config.dart` 中的 `supabaseUrl`、`supabaseAnonKey` 替换为你的项目值。
-2. **数据库**：按 `AGENTS.md` 中的建表与 RLS SQL 基线初始化表结构（参考 `supabase/*.sql`）。
-3. **Edge Functions**：部署 `supabase/` 下的 4 个函数，并配置环境变量：
+### Supabase
 
-   ```text
-   SUPABASE_URL
-   SUPABASE_ANON_KEY
-   SUPABASE_SERVICE_ROLE_KEY
-   OSS_ACCESS_KEY_ID
-   OSS_ACCESS_KEY_SECRET
-   OSS_BUCKET
-   OSS_REGION
-   ```
+需要准备：
 
-4. **阿里云 OSS**：创建 Bucket，并在 OSS 控制台配置图片样式 `small-photos`、`preview`。
-5. **定时任务**：在 Supabase Dashboard 配置 Cron，每 5 分钟调用一次 `cleanup-expired-albums`。
+* Supabase 项目
+* PostgreSQL 数据库
+* Auth
+* RLS 策略
+* Edge Functions
 
-## 当前状态
+数据库结构和相关 SQL 位于：
 
-- 个人独立开发项目，于 2026 年 9 月正式建立 Git 版本控制。
-- 核心业务闭环已完成：创建 / 加入 / 上传 / 浏览 / 下载 / 删除 / 过期清理。
-- 主要在 **Android** 上进行开发验证；**Web** 有专门的浏览器适配层（XHR 上传进度、Blob 下载）；iOS / 桌面平台工程目录完整，但验证有限，未宣称全平台稳定运行。
-- 过期清理 Edge Function 已实现，Cron 调度需在 Supabase Dashboard 手动配置。
-- 测试覆盖有限：`test/` 目前仅一个基础 widget 测试；无 CI/CD 流水线。
+```text
+supabase/
+```
+
+### Edge Functions
+
+部署 `supabase/` 下的 Edge Functions，并配置对应环境变量：
+
+```text
+SUPABASE_URL
+SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+
+OSS_ACCESS_KEY_ID
+OSS_ACCESS_KEY_SECRET
+OSS_BUCKET
+OSS_REGION
+```
+
+### 阿里云 OSS
+
+需要创建 OSS Bucket，并配置项目使用的图片处理样式，例如：
+
+```text
+small-photos
+preview
+```
+
+### 定时任务
+
+在 Supabase Dashboard 中配置 Cron，定期调用：
+
+```text
+cleanup-expired-albums
+```
+
+## 项目状态
+
+目前已经完成主要业务闭环：
+
+```text
+创建相册
+   ↓
+分享
+   ↓
+加入相册
+   ↓
+浏览照片
+   ↓
+上传 / 下载 / 删除
+   ↓
+相册过期
+   ↓
+后台自动清理
+```
+
+项目主要在 Android 环境下进行开发和验证，同时完成了 Web / PWA 的基本适配。
+
+目前测试覆盖仍然有限，`test/` 中只有基础 Widget 测试，也没有配置 CI/CD。
+
+## 开发记录
+
+这个项目使用 Git 进行版本管理，完整开发过程保留在 Git 提交历史中。
+
+主要提交包括：
+
+```text
+chore: initialize project version control
+docs: prepare project for public repository
+```
+
+后续开发也会继续通过 Git 记录功能修改和问题修复。
 
