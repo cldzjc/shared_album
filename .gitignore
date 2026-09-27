@@ -19,9 +19,9 @@ migrate_working_dir/
 .idea/
 
 # The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# VS Code. 本项目使用 VS Code 集成任务，tasks.json 会被工具自动重建，
+# 属于 IDE 本地配置，不进入公开仓库。
+.vscode/
 
 # Flutter/Dart/Pub related
 **/doc/api/
@@ -57,6 +57,10 @@ app.*.map.json
 
 # Cloudflare Wrangler 本地状态（临时工具缓存，不入库）
 .wrangler/
+
+# UI 设计参考（Figma Make 生成的独立 React/shadcn 脚手架，非本 Flutter 项目源码）
+# 保留在本地磁盘供设计参考，不进入公开仓库。
+design_reference/
 
 # 开发过程生成的源码合集快照（lib/ 的完整复制品，非正式源码）
 # 保留在本地磁盘，但不进入 Git，避免源码重复与内容过期。
