@@ -1,8 +1,7 @@
-gradle-wrapper.jar
+# gradlew、gradlew.bat、gradle-wrapper.jar 必须入库：
+# 它们是 Gradle Wrapper 的入口，缺失时其他开发者 clone 后无法直接构建 Android。
 /.gradle
 /captures/
-/gradlew
-/gradlew.bat
 /local.properties
 GeneratedPluginRegistrant.java
 .cxx/

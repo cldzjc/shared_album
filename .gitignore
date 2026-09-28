@@ -66,6 +66,12 @@ design_reference/
 # 保留在本地磁盘，但不进入 Git，避免源码重复与内容过期。
 lib_source_合集.txt
 
+# 内部开发文档（AI 协作规则、Bug 记录、方案草稿）
+# 保留在本地磁盘，不进入公开仓库。
+AGENTS.md
+bugs.md
+游客系统实现.md
+
 # ── 明确入库说明（请勿把以下目录/文件重新加入忽略）────────────────
 # android/ ios/ web/ linux/ macos/ windows/ 是平台源码目录，必须入库，
 # 否则招聘方/协作者 clone 后无法构建项目。

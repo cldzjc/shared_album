@@ -181,17 +181,28 @@ Supabase Cron 每 5 分钟触发一次 `cleanup-expired-albums`，后台查找�
 
 ### 7. 游客访问
 
-项目没有使用匿名登录来实现游客模式。
-
-游客通过：
+游客模式基于 Supabase Anonymous Auth 实现，不需要单独实现一套无身份系统：
 
 ```text
-6 位分享码 + 访问密码
+首次打开 App（无会话）
+        ↓
+signInAnonymously() 获得匿名 UID
+        ↓
+输入 6 位分享码 + 访问密码
+        ↓
+加入并浏览相册
+        ↓
+updateUser 绑定邮箱 + 密码（UID 不变）
+        ↓
+原地升级为正式账号
 ```
 
-进入相册，并根据 `profiles.account_type` 区分 `guest` 和 `normal` 用户。
+业务身份由 `profiles.account_type` 区分 `guest` / `normal`，权限判定集中在 `lib/services/guest_session_manager.dart`：
 
-游客主要用于浏览和加入相册，创建、上传、下载、删除等操作需要正式账号。
+* 游客可以浏览、加入相册
+* 创建、上传、下载、删除等操作需要正式账号，由 UI 层统一拦截引导升级
+
+升级时通过 Supabase 官方提供的 `updateUser` 路径绑定邮箱和密码，匿名 UID 保持不变，已有的参与记录和访问权限无缝延续，不需要迁移任何数据。
 
 ## Edge Functions
 
@@ -311,16 +322,5 @@ cleanup-expired-albums
 
 目前测试覆盖仍然有限，`test/` 中只有基础 Widget 测试，也没有配置 CI/CD。
 
-## 开发记录
 
-这个项目使用 Git 进行版本管理，完整开发过程保留在 Git 提交历史中。
-
-主要提交包括：
-
-```text
-chore: initialize project version control
-docs: prepare project for public repository
-```
-
-后续开发也会继续通过 Git 记录功能修改和问题修复。
 
